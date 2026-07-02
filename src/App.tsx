@@ -14,7 +14,8 @@ import { LoadingSpinner } from './components/LoadingSpinner';
 import { supabase } from './lib/supabase';
 import type { Step, ReservationState, Menu, Location } from './types/index';
 
-const MAX_BOOKINGS = 2;
+const DAILY_MAX = 2;    // 1日に受け付ける予約の上限（1枠1予約）
+const BREAK_HOURS = 1;  // 予約と予約の間に必ず空ける休憩（時間）
 
 const INITIAL_STATE: ReservationState = {
   selectedMenu: null,
@@ -84,7 +85,7 @@ function ReservationApp() {
         .single();
       if (ue || !user) throw new Error('ユーザー登録に失敗しました');
 
-      // 予約枠の空き確認（最大2件）
+      // 予約枠の空き確認（1枠1予約・1日2件まで・前後に1時間の休憩）
       const providerMinutes = menu.provider_duration_minutes ?? menu.duration_minutes;
       const slotsNeeded = Math.ceil(providerMinutes / 60);
       const startHour = parseInt(time.slice(0, 2));
@@ -98,19 +99,25 @@ function ReservationApp() {
         .eq('date', date)
         .eq('status', 'confirmed');
 
-      // 各時間スロットの予約数を集計
-      const occupancy = new Map<string, number>();
-      (existingReservations ?? []).forEach((r: any) => {
+      const existing = existingReservations ?? [];
+
+      // 1日の予約上限チェック
+      if (existing.length >= DAILY_MAX) {
+        throw new Error('この日はすでに予約が満枠です。別の日をお選びください。');
+      }
+
+      // 各予約の占有時間＋前後の休憩をブロック対象として集計
+      const blocked = new Set<string>();
+      existing.forEach((r: any) => {
         const rStartH = parseInt((r.time as string).slice(0, 2));
         const rDuration = r.menu?.provider_duration_minutes ?? r.menu?.duration_minutes ?? 90;
         const rSlots = Math.ceil(rDuration / 60);
-        for (let i = 0; i < rSlots; i++) {
-          const t = `${String(rStartH + i).padStart(2, '0')}:00`;
-          occupancy.set(t, (occupancy.get(t) ?? 0) + 1);
+        for (let i = -BREAK_HOURS; i < rSlots + BREAK_HOURS; i++) {
+          blocked.add(`${String(rStartH + i).padStart(2, '0')}:00`);
         }
       });
 
-      const isFull = neededTimes.some(t => (occupancy.get(t) ?? 0) >= MAX_BOOKINGS);
+      const isFull = neededTimes.some(t => blocked.has(t));
       if (isFull) throw new Error('この時間はすでに満枠です。別の時間をお選びください。');
 
       const { data: reservation, error: re } = await supabase

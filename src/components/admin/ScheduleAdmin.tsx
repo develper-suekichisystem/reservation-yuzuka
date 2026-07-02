@@ -123,7 +123,7 @@ export function ScheduleAdmin() {
     setSaving(true);
     await supabase.from('available_slots').delete().eq('date', editDate);
     if (selectedTimes.size > 0) {
-      const rows = [...selectedTimes].map(t => ({ date: editDate, time: `${t}:00`, max_bookings: 2 }));
+      const rows = [...selectedTimes].map(t => ({ date: editDate, time: `${t}:00`, max_bookings: 1 }));
       await supabase.from('available_slots').insert(rows);
     }
     await fetchSlots();

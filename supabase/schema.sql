@@ -44,13 +44,13 @@ CREATE TABLE locations (
 );
 
 -- ============================================================
--- available_slots（予約受付可能日時 — 同時間帯に最大2予約）
+-- available_slots（予約受付可能日時 — 1枠1予約。1日の上限・休憩はアプリ側で制御）
 -- ============================================================
 CREATE TABLE available_slots (
   id           UUID        DEFAULT gen_random_uuid() PRIMARY KEY,
   date         DATE        NOT NULL,
   time         TIME        NOT NULL,
-  max_bookings INTEGER     DEFAULT 2,
+  max_bookings INTEGER     DEFAULT 1,
   created_at   TIMESTAMPTZ DEFAULT NOW(),
   UNIQUE (date, time)
 );
