@@ -10,6 +10,7 @@ import { ReservationForm } from './components/ReservationForm';
 import { Confirmation } from './components/Confirmation';
 import { Complete } from './components/Complete';
 import { AdminPage } from './components/admin/AdminPage';
+import { WhoAmI } from './components/WhoAmI';
 import { LoadingSpinner } from './components/LoadingSpinner';
 import { supabase } from './lib/supabase';
 import type { Step, ReservationState, Menu, Location } from './types/index';
@@ -240,6 +241,8 @@ function ReservationApp() {
 }
 
 export default function App() {
-  if (window.location.hash === '#admin') return <AdminPage />;
+  const path = window.location.pathname;
+  if (path === '/whoami' || window.location.hash === '#whoami') return <WhoAmI />;
+  if (path === '/admin' || window.location.hash === '#admin') return <AdminPage />;
   return <ReservationApp />;
 }
