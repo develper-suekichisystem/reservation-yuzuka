@@ -85,6 +85,8 @@ export function ScheduleAdmin() {
   const today = new Date().toISOString().split('T')[0];
   const [editDate, setEditDate] = useState(today);
   const [selectedTimes, setSelectedTimes] = useState<Set<string>>(new Set());
+  // 編集中の日が既に公開済みだったか（保存時に公開状態を保つ）
+  const [editWasPublished, setEditWasPublished] = useState(false);
 
   useEffect(() => { fetchSlots(); }, []);
 
@@ -104,10 +106,13 @@ export function ScheduleAdmin() {
     setEditDate(date);
     const { data } = await supabase
       .from('available_slots')
-      .select('time')
+      .select('time, is_published')
       .eq('date', date);
-    const times = new Set((data ?? []).map(r => (r.time as string).slice(0, 5)));
+    const rows = data ?? [];
+    const times = new Set(rows.map(r => (r.time as string).slice(0, 5)));
     setSelectedTimes(times);
+    // 1枠でも公開済みならこの日は公開扱い（保存時に維持）
+    setEditWasPublished(rows.some(r => r.is_published as boolean));
   }
 
   function toggleTime(time: string) {
@@ -123,7 +128,12 @@ export function ScheduleAdmin() {
     setSaving(true);
     await supabase.from('available_slots').delete().eq('date', editDate);
     if (selectedTimes.size > 0) {
-      const rows = [...selectedTimes].map(t => ({ date: editDate, time: `${t}:00`, max_bookings: 1 }));
+      const rows = [...selectedTimes].map(t => ({
+        date: editDate,
+        time: `${t}:00`,
+        max_bookings: 1,
+        is_published: editWasPublished, // 新規は下書き、公開済みの日は公開を維持
+      }));
       await supabase.from('available_slots').insert(rows);
     }
     await fetchSlots();
@@ -133,6 +143,28 @@ export function ScheduleAdmin() {
 
   async function removeSlot(id: string) {
     await supabase.from('available_slots').delete().eq('id', id);
+    await fetchSlots();
+  }
+
+  // 日単位の公開／非公開
+  async function setDayPublished(date: string, publish: boolean) {
+    await supabase
+      .from('available_slots')
+      .update({ is_published: publish })
+      .eq('date', date);
+    await fetchSlots();
+  }
+
+  // 月単位でまとめて公開
+  async function setMonthPublished(ym: string, publish: boolean) {
+    const label = publish ? '公開' : '非公開に';
+    if (!window.confirm(`${ym.replace('-', '年')}月の予約枠をすべて${label}しますか？`)) return;
+    const ids = (groupedByMonth[ym] ?? []).map(s => s.id);
+    if (ids.length === 0) return;
+    await supabase
+      .from('available_slots')
+      .update({ is_published: publish })
+      .in('id', ids);
     await fetchSlots();
   }
 
@@ -151,7 +183,7 @@ export function ScheduleAdmin() {
         <div className="schedule-header-row">
           <button
             className="btn-primary"
-            onClick={() => { setEditDate(today); setSelectedTimes(new Set()); setMode('edit'); }}
+            onClick={() => { setEditDate(today); setSelectedTimes(new Set()); setEditWasPublished(false); setMode('edit'); }}
           >
             ＋ 予約受付時間を設定する
           </button>
@@ -162,30 +194,56 @@ export function ScheduleAdmin() {
         ) : (
           Object.entries(groupedByMonth).map(([ym, slots]) => {
             const [y, m] = ym.split('-');
+            const hasDraft = slots.some(s => !s.is_published);
             return (
               <section key={ym} className="schedule-month-group">
-                <h3 className="schedule-month-heading">{y}年 {MONTH_NAMES[parseInt(m) - 1]}</h3>
+                <div className="schedule-month-headrow">
+                  <h3 className="schedule-month-heading">{y}年 {MONTH_NAMES[parseInt(m) - 1]}</h3>
+                  {hasDraft ? (
+                    <button className="btn-publish-month" onClick={() => setMonthPublished(ym, true)}>
+                      この月をまとめて公開
+                    </button>
+                  ) : (
+                    <button className="btn-unpublish-month" onClick={() => setMonthPublished(ym, false)}>
+                      この月を非公開に戻す
+                    </button>
+                  )}
+                </div>
                 {Object.entries(
                   slots.reduce<Record<string, AvailableSlot[]>>((acc, s) => {
                     if (!acc[s.date]) acc[s.date] = [];
                     acc[s.date].push(s);
                     return acc;
                   }, {})
-                ).map(([date, daySlots]) => (
-                  <div key={date} className="schedule-day-row">
-                    <span className="schedule-day-label">
-                      {date.replace(/-/g, '/')}（{DAY_NAMES[new Date(date).getDay()]}）
-                    </span>
-                    <div className="schedule-time-chips">
-                      {daySlots.map(s => (
-                        <span key={s.id} className="schedule-chip">
-                          {s.time.slice(0, 5)}
-                          <button className="chip-remove" onClick={() => removeSlot(s.id)} title="削除">×</button>
+                ).map(([date, daySlots]) => {
+                  const dayPublished = daySlots.every(s => s.is_published);
+                  return (
+                    <div key={date} className={`schedule-day-row${dayPublished ? '' : ' is-draft'}`}>
+                      <div className="schedule-day-head">
+                        <span className="schedule-day-label">
+                          {date.replace(/-/g, '/')}（{DAY_NAMES[new Date(date).getDay()]}）
                         </span>
-                      ))}
+                        <span className={`publish-badge${dayPublished ? ' published' : ''}`}>
+                          {dayPublished ? '公開中' : '下書き'}
+                        </span>
+                        <button
+                          className={dayPublished ? 'btn-unpublish-day' : 'btn-publish-day'}
+                          onClick={() => setDayPublished(date, !dayPublished)}
+                        >
+                          {dayPublished ? '非公開' : '公開する'}
+                        </button>
+                      </div>
+                      <div className="schedule-time-chips">
+                        {daySlots.map(s => (
+                          <span key={s.id} className="schedule-chip">
+                            {s.time.slice(0, 5)}
+                            <button className="chip-remove" onClick={() => removeSlot(s.id)} title="削除">×</button>
+                          </span>
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </section>
             );
           })
@@ -200,7 +258,10 @@ export function ScheduleAdmin() {
     <div className="schedule-admin">
       <button className="btn-back" onClick={() => setMode('list')}>← 一覧に戻る</button>
       <h3 className="schedule-heading">予約受付時間の設定</h3>
-      <p className="schedule-desc">カレンダーで日付を選び、受付する時間帯をタップして保存してください。</p>
+      <p className="schedule-desc">
+        カレンダーで日付を選び、受付する時間帯をタップして保存してください。
+        保存した枠は<strong>「下書き」</strong>として作成されます。一覧の<strong>「公開する」</strong>を押すと一般利用者に表示されます。
+      </p>
 
       <InlineCalendar selected={editDate} onSelect={handleDateSelect} />
 

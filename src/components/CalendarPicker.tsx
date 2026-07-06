@@ -25,6 +25,7 @@ export function CalendarPicker({ onSelect, onBack }: Props) {
     supabase
       .from('available_slots')
       .select('date')
+      .eq('is_published', true)
       .gte('date', todayStr)
       .then(({ data }) => {
         if (!data) return;

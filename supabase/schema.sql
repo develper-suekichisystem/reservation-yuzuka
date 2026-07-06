@@ -51,6 +51,7 @@ CREATE TABLE available_slots (
   date         DATE        NOT NULL,
   time         TIME        NOT NULL,
   max_bookings INTEGER     DEFAULT 1,
+  is_published BOOLEAN     NOT NULL DEFAULT FALSE,
   created_at   TIMESTAMPTZ DEFAULT NOW(),
   UNIQUE (date, time)
 );

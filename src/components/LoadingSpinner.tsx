@@ -12,79 +12,60 @@ const SPARKLES = [
   { top: '20%', left: '48%', delay: '1.6s', size: '14px', char: '✦' },
 ];
 
-// タンポポの妖精シルエット（上＝綿毛の頭、下＝タンポポのドレス）
+// ひまわり型（花芯のまわりに花びら／茎／左右の葉）— 色は従来のピンク系のまま
 const d2r = (d: number) => (d * Math.PI) / 180;
-const HEAD_ANGLES = [0, 22.5, 45, 67.5, 90, 112.5, 135, 157.5];
-const WX = 50;
-const WY = 46;          // 腰（スカートの基点）
-const SKIRT_N = 15;
-const SKIRT_SPREAD = 100;
-const SKIRT_RX = 28;
-const SKIRT_RY = 26;
+const HEAD_CX = 50;
+const HEAD_CY = 30;      // 花の中心
+const PETAL_N = 20;      // 花びらの枚数
+const PETAL_RING = 14;   // 花びらリングの半径（中心→花びら中心）
+const PETAL_RY = 7;      // 花びらの長さ（半径）
+const PETAL_RX = 4.2;    // 花びらの幅（半径・丸みを出す）
 
-// 腰から (tx,ty) へ伸びる花びら（細い楕円）
-function petalTo(tx: number, ty: number, w: number, key: string) {
-  const dx = tx - WX;
-  const dy = ty - WY;
-  const dist = Math.hypot(dx, dy);
-  const cx = (WX + tx) / 2;
-  const cy = (WY + ty) / 2;
-  const rot = (Math.atan2(dx, dy) * 180) / Math.PI;
+// 中心から角度 a(度) の向きに1枚の花びらを描く
+function petal(a: number, ring: number, rx: number, ry: number, key: string) {
+  const cx = HEAD_CX + ring * Math.cos(d2r(a));
+  const cy = HEAD_CY + ring * Math.sin(d2r(a));
   return (
-    <ellipse key={key} cx={cx} cy={cy} rx={w} ry={dist / 2}
-      transform={`rotate(${rot} ${cx} ${cy})`} />
+    <ellipse key={key} cx={cx} cy={cy} rx={rx} ry={ry}
+      transform={`rotate(${a + 90} ${cx} ${cy})`} />
   );
 }
 
 function StarSvg() {
-  // スカートの外周（花びらの先端）
-  const tips = Array.from({ length: SKIRT_N }, (_, i) => {
-    const k = (i / (SKIRT_N - 1)) * 2 - 1;
-    const ang = k * SKIRT_SPREAD;
-    return [WX + SKIRT_RX * Math.sin(d2r(ang)), WY + SKIRT_RY * Math.cos(d2r(ang))] as const;
-  });
-  const skirtPoly =
-    `54,46 ` + tips.map(t => `${t[0].toFixed(1)},${t[1].toFixed(1)}`).join(' ') + ` 46,46`;
-
   return (
     <svg viewBox="0 0 100 100" className="crystal-vessel-svg" xmlns="http://www.w3.org/2000/svg">
       <defs>
-        <radialGradient id="starGrad" cx="50%" cy="26%" r="74%">
+        <radialGradient id="starGrad" cx="50%" cy="30%" r="72%">
           <stop offset="0%" stopColor="#fef3a0" />
           <stop offset="55%" stopColor="#f5c0d0" />
           <stop offset="100%" stopColor="#e07898" />
         </radialGradient>
       </defs>
 
-      <g fill="url(#starGrad)" opacity="0.95">
-        {/* 頭（綿毛） */}
-        {HEAD_ANGLES.map(a => (
-          <ellipse key={`h${a}`} cx="50" cy="21" rx="13" ry="2.7"
-            transform={`rotate(${a} 50 21)`} />
-        ))}
-        <circle cx="50" cy="21" r="7" />
+      {/* 茎（緑ではなく従来のグラデで統一） */}
+      <path d="M48.6 44 h2.8 l-0.7 42 h-1.4 z" fill="url(#starGrad)" opacity="0.9" />
 
-        {/* 胴（茎） */}
-        <path d="M47.8 30 h4.4 l-1.3 16 h-1.8 z" />
-
-        {/* スカートの下地（花びらの隙間を埋めるドーム） */}
-        <polygon points={skirtPoly} opacity="0.9" />
-
-        {/* スカートの花びら（外側の長い列） */}
-        {tips.map((t, i) => petalTo(t[0], t[1], 2.3, `so${i}`))}
-
-        {/* スカートの花びら（内側の短い列で密度を出す） */}
-        {Array.from({ length: SKIRT_N }, (_, i) => {
-          const k = (i / (SKIRT_N - 1)) * 2 - 1;
-          const ang = k * 90;
-          const tx = WX + SKIRT_RX * 0.6 * Math.sin(d2r(ang));
-          const ty = WY + SKIRT_RY * 0.6 * Math.cos(d2r(ang));
-          return petalTo(tx, ty, 2.0, `si${i}`);
-        })}
+      {/* 左右の葉（細めの葉っぱ） */}
+      <g fill="url(#starGrad)" opacity="0.85">
+        <ellipse cx="38" cy="64" rx="11" ry="4.5" transform="rotate(-28 38 64)" />
+        <ellipse cx="62" cy="70" rx="11" ry="4.5" transform="rotate(28 62 70)" />
       </g>
 
+      <g fill="url(#starGrad)" opacity="0.95">
+        {/* 花びら（外周） */}
+        {Array.from({ length: PETAL_N }, (_, i) =>
+          petal((360 / PETAL_N) * i, PETAL_RING, PETAL_RX, PETAL_RY, `po${i}`))}
+        {/* 花びら（内側・すき間を埋める） */}
+        {Array.from({ length: PETAL_N }, (_, i) =>
+          petal((360 / PETAL_N) * i + 360 / PETAL_N / 2, PETAL_RING - 2.5, PETAL_RX - 0.6, PETAL_RY - 1.5, `pi${i}`))}
+      </g>
+
+      {/* 花芯 */}
+      <circle cx={HEAD_CX} cy={HEAD_CY} r="8.5" fill="url(#starGrad)" />
+      <circle cx={HEAD_CX} cy={HEAD_CY} r="8.5" fill="rgba(180,70,110,0.25)" />
+
       {/* やわらかな光 */}
-      <circle cx="50" cy="19" r="4" fill="rgba(255,255,255,0.4)" />
+      <circle cx="47" cy="27" r="3" fill="rgba(255,255,255,0.45)" />
     </svg>
   );
 }
@@ -104,7 +85,20 @@ export function LoadingSpinner({ variant = 'full' }: Props) {
         </div>
       ))}
       <div className="spinner-container">
-        <StarSvg />
+        <div className="fairy-stage">
+          <StarSvg />
+          {/* 花のまわりを行き来する1匹の妖精 */}
+          <div className="fairy-flit">
+            <div className="fairy">
+              <span className="fairy-wing fairy-wing-l" />
+              <span className="fairy-wing fairy-wing-r" />
+              <span className="fairy-body" />
+              <span className="fairy-dust fairy-dust-1">･</span>
+              <span className="fairy-dust fairy-dust-2">✦</span>
+              <span className="fairy-dust fairy-dust-3">･</span>
+            </div>
+          </div>
+        </div>
       </div>
       <p className="loading-text">✦ 準備しています... ✦</p>
     </div>

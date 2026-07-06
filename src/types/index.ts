@@ -44,6 +44,7 @@ export interface AvailableSlot {
   date: string;
   time: string;
   max_bookings: number;
+  is_published: boolean;
 }
 
 export interface Reservation {

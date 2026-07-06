@@ -28,8 +28,9 @@ export function TimePicker({ date, selectedMenu, onSelect, onBack }: Props) {
       const [{ data: slotData }, { data: reservData }] = await Promise.all([
         supabase
           .from('available_slots')
-          .select('id, date, time, max_bookings')
+          .select('id, date, time, max_bookings, is_published')
           .eq('date', date)
+          .eq('is_published', true)
           .order('time'),
         supabase
           .from('reservations')
