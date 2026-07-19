@@ -325,7 +325,7 @@ body {
   transform: translateY(-2px);
 }
 .menu-name  { font-size: 16px; font-weight: 700; color: var(--gray-800); margin-bottom: 6px; }
-.menu-desc  { font-size: 12px; color: var(--gray-600); margin-bottom: 10px; line-height: 1.6; }
+.menu-desc  { font-size: 12px; color: var(--gray-600); margin-bottom: 10px; line-height: 1.6; white-space: pre-wrap; }
 .menu-footer { display: flex; justify-content: space-between; align-items: center; }
 .menu-price  { font-size: 18px; font-weight: 700; color: var(--primary-dark); }
 .menu-duration {
@@ -626,7 +626,7 @@ body {
 .menu-admin-name  { font-size: 15px; font-weight: 600; color: var(--gray-800); margin-bottom: 2px; }
 .menu-admin-price { font-size: 14px; font-weight: 700; color: var(--primary-dark); margin-bottom: 4px; }
 .menu-admin-duration { font-size: 12px; color: var(--gray-400); margin-top: 2px; }
-.menu-admin-desc  { font-size: 12px; color: var(--gray-600); line-height: 1.5; }
+.menu-admin-desc  { font-size: 12px; color: var(--gray-600); line-height: 1.5; white-space: pre-wrap; }
 .menu-admin-actions { display: flex; gap: 8px; }
 .btn-toggle {
   font-size: 12px; border-radius: 20px; padding: 4px 10px;
