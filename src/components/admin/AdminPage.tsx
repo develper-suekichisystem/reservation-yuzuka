@@ -39,7 +39,7 @@ function ReservationAdmin() {
 
   function formatTimeRange(time: string, menu?: Reservation['menu']) {
     const start = time.slice(0, 5);
-    const duration = menu?.customer_duration_minutes ?? menu?.duration_minutes;
+    const duration = menu?.provider_duration_minutes ?? menu?.duration_minutes;
     if (!duration) return start;
     const [h, m] = start.split(':').map(Number);
     const endTotal = h * 60 + m + duration;
