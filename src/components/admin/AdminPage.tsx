@@ -9,27 +9,46 @@ import type { Reservation } from '../../types/index';
 type AdminTab = 'reservations' | 'menus' | 'schedule' | 'locations';
 
 function ReservationAdmin() {
-  const today = new Date().toISOString().split('T')[0];
-  const [selectedDate, setSelectedDate] = useState(today);
+  const currentMonth = new Date().toISOString().slice(0, 7);
+  const [selectedMonth, setSelectedMonth] = useState(currentMonth);
   const [reservations, setReservations] = useState<Reservation[]>([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     fetchReservations();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedDate]);
+  }, [selectedMonth]);
 
   async function fetchReservations() {
     setLoading(true);
+    const [year, month] = selectedMonth.split('-').map(Number);
+    const startDate = `${selectedMonth}-01`;
+    const nextMonth = month === 12 ? `${year + 1}-01` : `${year}-${String(month + 1).padStart(2, '0')}`;
+    const endDate = `${nextMonth}-01`;
     const { data } = await supabase
       .from('reservations')
       .select('*, user:users(*), menu:menus(*), location:locations(*)')
-      .eq('date', selectedDate)
+      .gte('date', startDate)
+      .lt('date', endDate)
       .eq('status', 'confirmed')
+      .order('date')
       .order('time');
     if (data) setReservations(data as Reservation[]);
     setLoading(false);
   }
+
+  function formatDateHeading(date: string) {
+    const d = new Date(`${date}T00:00:00`);
+    const weekday = ['日', '月', '火', '水', '木', '金', '土'][d.getDay()];
+    return `${d.getMonth() + 1}月${d.getDate()}日（${weekday}）`;
+  }
+
+  const grouped = reservations.reduce<Record<string, Reservation[]>>((acc, r) => {
+    const date = r.date as string;
+    (acc[date] ||= []).push(r);
+    return acc;
+  }, {});
+  const dates = Object.keys(grouped).sort();
 
   async function cancelReservation(id: string) {
     if (!confirm('この予約をキャンセルしますか？')) return;
@@ -40,45 +59,50 @@ function ReservationAdmin() {
   return (
     <>
       <div className="admin-date-picker">
-        <label>日付：</label>
+        <label>月：</label>
         <input
-          type="date"
-          value={selectedDate}
-          onChange={e => setSelectedDate(e.target.value)}
+          type="month"
+          value={selectedMonth}
+          onChange={e => setSelectedMonth(e.target.value)}
         />
       </div>
 
       {loading ? (
         <div className="loading">読み込み中...</div>
       ) : reservations.length === 0 ? (
-        <p className="no-data">この日の予約はありません</p>
+        <p className="no-data">この月の予約はありません</p>
       ) : (
-        <div className="admin-list">
-          {reservations.map(r => (
-            <div key={r.id} className="admin-card">
-              <div className="admin-time">{(r.time as string).slice(0, 5)}</div>
-              <div className="admin-info">
-                <div className="admin-name">{r.user?.name}</div>
-                <div className="admin-menu">{r.menu?.name}</div>
-                <div className="admin-contact">
-                  <span>{r.user?.phone}</span>
+        dates.map(date => (
+          <div key={date} className="admin-date-group">
+            <h3 className="admin-date-heading">{formatDateHeading(date)}</h3>
+            <div className="admin-list">
+              {grouped[date].map(r => (
+                <div key={r.id} className="admin-card">
+                  <div className="admin-time">{(r.time as string).slice(0, 5)}</div>
+                  <div className="admin-info">
+                    <div className="admin-name">{r.user?.name}</div>
+                    <div className="admin-menu">{r.menu?.name}</div>
+                    <div className="admin-contact">
+                      <span>{r.user?.phone}</span>
+                    </div>
+                    <div>
+                      {r.is_online
+                        ? <span className="admin-online-badge">💻 オンライン</span>
+                        : <span className="admin-offline-badge">🌸 対面{r.location ? `：${r.location.name}` : ''}</span>
+                      }
+                    </div>
+                    {r.referrer_name && (
+                      <div className="admin-referrer">紹介者: {r.referrer_name}</div>
+                    )}
+                  </div>
+                  <button className="btn-cancel" onClick={() => cancelReservation(r.id)}>
+                    キャンセル
+                  </button>
                 </div>
-                <div>
-                  {r.is_online
-                    ? <span className="admin-online-badge">💻 オンライン</span>
-                    : <span className="admin-offline-badge">🌸 対面{r.location ? `：${r.location.name}` : ''}</span>
-                  }
-                </div>
-                {r.referrer_name && (
-                  <div className="admin-referrer">紹介者: {r.referrer_name}</div>
-                )}
-              </div>
-              <button className="btn-cancel" onClick={() => cancelReservation(r.id)}>
-                キャンセル
-              </button>
+              ))}
             </div>
-          ))}
-        </div>
+          </div>
+        ))
       )}
     </>
   );
@@ -94,7 +118,7 @@ export function AdminPage() {
     <div className="admin-page">
       <header className="app-header">
         <h1 className="app-title">yuzunokaori 管理画面</h1>
-        <p className="app-subtitle">直感カウンセラー 渡邉柚香</p>
+        <p className="app-subtitle">直感カウンセラー 柚香</p>
       </header>
 
       <div className="admin-tabs">

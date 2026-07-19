@@ -178,7 +178,7 @@ function ReservationApp() {
     <div className="app">
       <header className="app-header">
         <h1 className="app-title">✦ yuzunokaori ✦</h1>
-        <p className="app-subtitle">直感カウンセラー 渡邉柚香</p>
+        <p className="app-subtitle">直感カウンセラー 柚香</p>
       </header>
 
       {step !== 'complete' && <StepIndicator currentStep={step} />}
