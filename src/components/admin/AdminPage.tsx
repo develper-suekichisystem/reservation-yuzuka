@@ -37,6 +37,18 @@ function ReservationAdmin() {
     setLoading(false);
   }
 
+  function formatTimeRange(time: string, menu?: Reservation['menu']) {
+    const start = time.slice(0, 5);
+    const duration = menu?.customer_duration_minutes ?? menu?.duration_minutes;
+    if (!duration) return start;
+    const [h, m] = start.split(':').map(Number);
+    const endTotal = h * 60 + m + duration;
+    const endH = Math.floor(endTotal / 60) % 24;
+    const endM = endTotal % 60;
+    const end = `${String(endH).padStart(2, '0')}:${String(endM).padStart(2, '0')}`;
+    return `${start} 〜 ${end}`;
+  }
+
   function formatDateHeading(date: string) {
     const d = new Date(`${date}T00:00:00`);
     const weekday = ['日', '月', '火', '水', '木', '金', '土'][d.getDay()];
@@ -78,7 +90,7 @@ function ReservationAdmin() {
             <div className="admin-list">
               {grouped[date].map(r => (
                 <div key={r.id} className="admin-card">
-                  <div className="admin-time">{(r.time as string).slice(0, 5)}</div>
+                  <div className="admin-time">{formatTimeRange(r.time as string, r.menu)}</div>
                   <div className="admin-info">
                     <div className="admin-name">{r.user?.name}</div>
                     <div className="admin-menu">{r.menu?.name}</div>

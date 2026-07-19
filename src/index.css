@@ -564,7 +564,7 @@ body {
   border-radius: 10px; background: var(--white);
   box-shadow: 0 1px 3px rgba(0,0,0,0.05);
 }
-.admin-time { font-size: 20px; font-weight: 700; color: var(--primary); min-width: 58px; padding-top: 2px; }
+.admin-time { font-size: 15px; font-weight: 700; color: var(--primary); min-width: 96px; padding-top: 4px; white-space: nowrap; }
 .admin-info { flex: 1; display: flex; flex-direction: column; gap: 3px; }
 .admin-name { font-size: 15px; font-weight: 600; color: var(--gray-800); }
 .admin-menu { font-size: 13px; color: var(--primary-dark); }
