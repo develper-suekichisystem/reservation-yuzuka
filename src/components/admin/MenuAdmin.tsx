@@ -135,9 +135,6 @@ export function MenuAdmin() {
                 お客様: {menu.customer_duration_minutes ?? menu.duration_minutes}分
                 　自分: {menu.provider_duration_minutes ?? menu.duration_minutes}分
               </div>
-              {menu.description && (
-                <div className="menu-admin-desc">{menu.description}</div>
-              )}
             </div>
             <div className="menu-admin-actions">
               <button
@@ -149,6 +146,9 @@ export function MenuAdmin() {
               <button className="btn-edit" onClick={() => openEdit(menu)}>編集</button>
               <button className="btn-delete" onClick={() => handleDelete(menu)}>削除</button>
             </div>
+            {menu.description && (
+              <div className="menu-admin-desc">{menu.description}</div>
+            )}
           </div>
         ))}
       </div>
